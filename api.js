@@ -3,10 +3,47 @@ require('dotenv').config();
 const db = require('./db'); 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 
 const app = express();
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+// Swagger setup
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'My Work API',
+      version: '1.0.0',
+      description: 'API for user management and announcements',
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: ['./api.js'], // Path to the API docs
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // midleware to authorize requests
 const  authorize = (req, res, next)=>{
     const userRole = req.user.role; // assuming req.user is set after authentication
@@ -37,12 +74,56 @@ jwt.verify(token, process.env.JWT_SECRET, (err, user)=>{
 
 }
 
-// Sample route
+/**
+ * @swagger
+ * /home:
+ *   get:
+ *     summary: Get home page
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Welcome message
+ *       401:
+ *         description: Unauthorized
+ */
 app.get('/home',authenticate,(req, res) => {
     res.send('Welcome to the Home Page');
 });
 
-// User registration
+/**
+ * @swagger
+ * /register:
+ *   post:
+ *     summary: Register a new user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - role
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: All fields are required
+ *       500:
+ *         description: Error registering user
+ */
 app.post('/register', async (req, res) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
@@ -63,7 +144,40 @@ app.post('/register', async (req, res) => {
     });
 });
 
-// User login
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Login a user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *             required:
+ *               - email
+ *               - password
+ *     responses:
+ *       200:
+ *         description: Login successful, returns JWT token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: User not found or invalid password
+ *       500:
+ *         description: Error during login
+ */
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
 
@@ -125,9 +239,35 @@ app.post('/send', (req, res) => {
     });
 });
 
-// ------------------
-// Get all users
-// ------------------
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   name:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   role:
+ *                     type: string
+ *                   created_at:
+ *                     type: string
+ *                     format: date-time
+ *       500:
+ *         description: Error fetching data
+ */
 app.get('/users', (req, res) => {
     const query = 'SELECT id, name, email, role, created_at FROM users';
     db.query(query, (err, results) => {
