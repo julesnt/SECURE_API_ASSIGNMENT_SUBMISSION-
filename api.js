@@ -22,7 +22,13 @@ const swaggerOptions = {
     servers: [
       {
         url: 'http://localhost:3000',
-        url2: 'https://secure-api-7ejv.onrender.com',
+        description: 'Development server',
+        
+      },
+      {
+        url: 'https://secure-api-7ejv.onrender.com',
+        description: 'Production server',
+      
       },
     ],
     components: {
